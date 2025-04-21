@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  master:
+    build: ./master
+    ports:
+      - "25000:25000"
+    environment:
+      - SECONDARY_URLS=http://secondary1:5001,http://secondary2:5002
+
+  secondary1:
+    build: ./secondary1
+    ports:
+      - "5001:5001"
+
+  secondary2:
+    build: ./secondary2
+    ports:
+      - "5002:5002"
+
+networks:
+  default:
+    driver: bridge
