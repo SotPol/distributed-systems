@@ -1,0 +1,66 @@
+version: '3.8'
+services:
+  user-service:
+    build: ./user_service
+    ports:
+      - "8001:8000"
+#    deploy:
+#      replicas: 2
+    environment:
+      - DATABASE_URL=mongodb://mongo1:27017,mongo2:27017/userdb?replicaSet=rs0
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo1
+      - mongo2
+      - redis
+
+  mongo1:
+    image: mongo:5.0
+    command: ["mongod", "--replSet", "rs0"]
+    ports: ["27017:27017"]
+  mongo2:
+    image: mongo:5.0
+    command: ["mongod", "--replSet", "rs0", "--port", "27018"]
+    ports: ["27018:27018"]
+  # Після старту контейнерів: виконати ініціалізацію репліки (mongosh rs.initiate())
+
+  order-service:
+    build: ./order_service
+    ports:
+      - "8002:5000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:pass@postgres:5432/orders
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass
+    ports: ["5432:5432"]
+
+  event-service:
+    build: ./event_service
+    ports:
+      - "8003:8000"
+    environment:
+      - CASSANDRA_CONTACT_POINTS=cassandra
+    depends_on:
+      - cassandra
+
+  cassandra:
+    image: cassandra:4.0
+    ports: ["9042:9042"]
+    environment:
+      - CASSANDRA_CLUSTER_NAME=AnalyticsCluster
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports: ["5672:5672", "15672:15672"]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
